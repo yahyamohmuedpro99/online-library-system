@@ -2,6 +2,7 @@ from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.services.book_service import BookService, ValidationError
+from marshmallow import ValidationError as MarshmallowValidationError
 
 api = Namespace('books', description='Book management operations')
 
@@ -60,8 +61,11 @@ class BookList(Resource):
         
         try:
             return BookService.get_books_with_filters(page, per_page, filters)
-        except ValidationError as e:
-            api.abort(400, str(e))
+        except (ValidationError, MarshmallowValidationError) as e:
+            if isinstance(e, MarshmallowValidationError):
+                api.abort(400, str(e.messages))
+            else:
+                api.abort(400, str(e))
 
     @api.expect(book_model)
     @api.marshal_with(book_response, code=201)
@@ -74,8 +78,11 @@ class BookList(Resource):
         try:
             book = BookService.create_book(data)
             return book, 201
-        except ValidationError as e:
-            api.abort(400, str(e))
+        except (ValidationError, MarshmallowValidationError) as e:
+            if isinstance(e, MarshmallowValidationError):
+                api.abort(400, str(e.messages))
+            else:
+                api.abort(400, str(e))
 
 @api.route('/<int:book_id>')
 class BookDetail(Resource):
@@ -85,8 +92,11 @@ class BookDetail(Resource):
         try:
             book = BookService.get_book_by_id(book_id)
             return book
-        except ValidationError as e:
-            api.abort(404, str(e))
+        except (ValidationError, MarshmallowValidationError) as e:
+            if isinstance(e, MarshmallowValidationError):
+                api.abort(400, str(e.messages))
+            else:
+                api.abort(404, str(e))
 
     @api.expect(book_model)
     @api.marshal_with(book_response)
@@ -99,8 +109,11 @@ class BookDetail(Resource):
         try:
             book = BookService.update_book(book_id, data)
             return book
-        except ValidationError as e:
-            api.abort(400, str(e))
+        except (ValidationError, MarshmallowValidationError) as e:
+            if isinstance(e, MarshmallowValidationError):
+                api.abort(400, str(e.messages))
+            else:
+                api.abort(400, str(e))
 
     @api.doc(security='Bearer')
     @jwt_required()
@@ -109,5 +122,8 @@ class BookDetail(Resource):
         try:
             BookService.delete_book(book_id)
             return {'message': 'Book deleted successfully'}, 200
-        except ValidationError as e:
-            api.abort(404, str(e))
+        except (ValidationError, MarshmallowValidationError) as e:
+            if isinstance(e, MarshmallowValidationError):
+                api.abort(400, str(e.messages))
+            else:
+                api.abort(404, str(e))

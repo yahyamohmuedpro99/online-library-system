@@ -11,14 +11,4 @@ class Book(db.Model):
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'title': self.title,
-            'author': self.author,
-            'category': self.category,
-            'price': self.price,
-            'release_date': self.release_date.isoformat() if self.release_date else None,
-            'description': self.description,
-            'created_at': self.created_at.isoformat()
-        }
+    # Removed to_dict() since we're using Marshmallow schemas for serialization

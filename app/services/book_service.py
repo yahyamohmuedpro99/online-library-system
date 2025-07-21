@@ -1,6 +1,7 @@
 from datetime import datetime
 from app import db
 from app.models.book import Book
+from app.schemas.book_schemas import BookCreateSchema, BookResponseSchema, BookUpdateSchema
 
 
 class ValidationError(Exception):
@@ -12,42 +13,23 @@ class BookService:
     @staticmethod
     def create_book(data):
         """Create a new book with validation"""
-        if not data:
-            raise ValidationError("No data provided")
-        
-        required_fields = ['title', 'author', 'category', 'price', 'release_date']
-        missing_fields = [field for field in required_fields if field not in data]
-        if missing_fields:
-            raise ValidationError(f"Missing required fields: {', '.join(missing_fields)}")
-        
-        # Validate and parse release date
-        try:
-            release_date = datetime.strptime(data['release_date'], '%Y-%m-%d').date()
-        except ValueError:
-            raise ValidationError('Invalid date format. Use YYYY-MM-DD')
-        
-        # Validate price
-        try:
-            price = float(data['price'])
-            if price < 0:
-                raise ValidationError('Price cannot be negative')
-        except (ValueError, TypeError):
-            raise ValidationError('Invalid price format')
+        schema = BookCreateSchema()
+        result = schema.load(data)
         
         # Create book
         book = Book(
-            title=data['title'].strip(),
-            author=data['author'].strip(),
-            category=data['category'].strip(),
-            price=price,
-            release_date=release_date,
-            description=data.get('description', '').strip()
+            title=result['title'],
+            author=result['author'],
+            category=result['category'],
+            price=result['price'],
+            release_date=result['release_date'],
+            description=result.get('description', '')
         )
         
         db.session.add(book)
         db.session.commit()
         
-        return book.to_dict()
+        return BookResponseSchema().dump(book)
     
     @staticmethod
     def get_books_with_filters(page=1, per_page=10, filters=None):
@@ -92,7 +74,7 @@ class BookService:
             raise ValidationError(f'Pagination error: {str(e)}')
         
         return {
-            'books': [book.to_dict() for book in books.items],
+            'books': BookResponseSchema(many=True).dump(books.items),
             'total': books.total,
             'pages': books.pages,
             'current_page': page
@@ -104,7 +86,7 @@ class BookService:
         book = Book.query.get(book_id)
         if not book:
             raise ValidationError(f'Book with ID {book_id} not found')
-        return book.to_dict()
+        return BookResponseSchema().dump(book)
     
     @staticmethod
     def update_book(book_id, data):
@@ -113,39 +95,30 @@ class BookService:
         if not book:
             raise ValidationError(f'Book with ID {book_id} not found')
         
-        if not data:
-            raise ValidationError('No data provided')
+        schema = BookUpdateSchema()
+        result = schema.load(data)
         
-        # Update fields if provided
-        if 'title' in data:
-            book.title = data['title'].strip()
+        # Update fields
+        if 'title' in result:
+            book.title = result['title']
         
-        if 'author' in data:
-            book.author = data['author'].strip()
+        if 'author' in result:
+            book.author = result['author']
         
-        if 'category' in data:
-            book.category = data['category'].strip()
+        if 'category' in result:
+            book.category = result['category']
         
-        if 'price' in data:
-            try:
-                price = float(data['price'])
-                if price < 0:
-                    raise ValidationError('Price cannot be negative')
-                book.price = price
-            except (ValueError, TypeError):
-                raise ValidationError('Invalid price format')
+        if 'price' in result:
+            book.price = result['price']
         
-        if 'description' in data:
-            book.description = data['description'].strip()
+        if 'description' in result:
+            book.description = result['description']
         
-        if 'release_date' in data:
-            try:
-                book.release_date = datetime.strptime(data['release_date'], '%Y-%m-%d').date()
-            except ValueError:
-                raise ValidationError('Invalid date format. Use YYYY-MM-DD')
+        if 'release_date' in result:
+            book.release_date = result['release_date']
         
         db.session.commit()
-        return book.to_dict()
+        return BookResponseSchema().dump(book)
     
     @staticmethod
     def delete_book(book_id):

@@ -1,6 +1,7 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from app.services.auth_service import AuthService, ValidationError
+from marshmallow import ValidationError as MarshmallowValidationError
 
 api = Namespace('auth', description='Authentication operations')
 
@@ -37,8 +38,11 @@ class Signup(Resource):
         try:
             user = AuthService.signup(data)
             return user, 201
-        except ValidationError as e:
-            api.abort(400, str(e))
+        except (ValidationError, MarshmallowValidationError) as e:
+            if isinstance(e, MarshmallowValidationError):
+                api.abort(400, str(e.messages))
+            else:
+                api.abort(400, str(e))
 
 @api.route('/login')
 class Login(Resource):
@@ -51,5 +55,8 @@ class Login(Resource):
         try:
             result = AuthService.login(data)
             return result
-        except ValidationError as e:
-            api.abort(401, str(e))
+        except (ValidationError, MarshmallowValidationError) as e:
+            if isinstance(e, MarshmallowValidationError):
+                api.abort(400, str(e.messages))
+            else:
+                api.abort(401, str(e))

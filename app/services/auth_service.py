@@ -1,6 +1,7 @@
 from flask_jwt_extended import create_access_token
 from app import db
 from app.models.user import User
+from app.schemas.user_schemas import UserRegistrationSchema, UserResponseSchema, UserLoginSchema
 
 
 class ValidationError(Exception):
@@ -12,58 +13,28 @@ class AuthService:
     @staticmethod
     def signup(data):
         """Create a new user account with validation"""
-        if not data:
-            raise ValidationError("No data provided")
-        
-        email = data.get('email', '').strip().lower()
-        password = data.get('password', '')
-        
-        if not email:
-            raise ValidationError('Email is required')
-        
-        if not password:
-            raise ValidationError('Password is required')
-        
-        # Basic email validation
-        if '@' not in email or '.' not in email:
-            raise ValidationError('Invalid email format')
-        
-        # Password strength validation
-        if len(password) < 6:
-            raise ValidationError('Password must be at least 6 characters long')
-        
-        # Check if user already exists
-        if User.query.filter_by(email=email).first():
-            raise ValidationError('Email already exists')
+        schema = UserRegistrationSchema()
+        result = schema.load(data)
         
         # Create user
-        user = User(email=email)
-        user.set_password(password)
+        user = User(email=result['email'])
+        user.set_password(result['password'])
         
         db.session.add(user)
         db.session.commit()
         
-        return user.to_dict()
+        return UserResponseSchema().dump(user)
     
     @staticmethod
     def login(data):
         """Authenticate user and return access token"""
-        if not data:
-            raise ValidationError("No data provided")
-        
-        email = data.get('email', '').strip().lower()
-        password = data.get('password', '')
-        
-        if not email:
-            raise ValidationError('Email is required')
-        
-        if not password:
-            raise ValidationError('Password is required')
+        schema = UserLoginSchema()
+        result = schema.load(data)
         
         # Find user
-        user = User.query.filter_by(email=email).first()
+        user = User.query.filter_by(email=result['email']).first()
         
-        if not user or not user.check_password(password):
+        if not user or not user.check_password(result['password']):
             raise ValidationError('Invalid credentials')
         
         # Create access token
@@ -71,7 +42,7 @@ class AuthService:
         
         return {
             'access_token': access_token,
-            'user': user.to_dict()
+            'user': UserResponseSchema().dump(user)
         }
     
     @staticmethod
@@ -80,4 +51,4 @@ class AuthService:
         user = User.query.get(user_id)
         if not user:
             raise ValidationError(f'User with ID {user_id} not found')
-        return user.to_dict()
+        return UserResponseSchema().dump(user)
