@@ -1,7 +1,6 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
-from flask_restx import Api
 from app.config import Config
 
 db = SQLAlchemy()
@@ -14,14 +13,22 @@ def create_app():
     db.init_app(app)
     jwt.init_app(app)
     
-    api = Api(app, doc='/docs/', title='Online Library API', version='1.0')
+    # Initialize API with Swagger
+    from app.api import api
+    api.init_app(app)
     
-    # Register blueprints
+    # Add JWT security definition for Swagger
+    api.authorizations = {
+        'Bearer': {
+            'type': 'apiKey',
+            'in': 'header',
+            'name': 'Authorization',
+            'description': 'JWT Authorization header using the Bearer scheme. Example: "Authorization: Bearer {token}"'
+        }
+    }
+    
+    # Register health check blueprint
     from app.routes import health_bp
-    from app.routes.users import users_bp
-    from app.routes.books import books_bp
     app.register_blueprint(health_bp)
-    app.register_blueprint(users_bp)
-    app.register_blueprint(books_bp)
     
     return app
