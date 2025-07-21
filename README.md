@@ -61,7 +61,7 @@ docker-compose up --build
 
 # Access the API
 # Swagger UI: http://localhost:5000/
-# API Base: http://localhost:5000/api/
+# API Base: http://localhost:5000/
 ```
 
 ### Local Development
@@ -122,15 +122,15 @@ python scripts/seed_data.py --help
 ## 📚 API Endpoints
 
 ### Authentication
-- `POST /api/auth/signup` - Register a new user
-- `POST /api/auth/login` - Login and get JWT token
+- `POST /auth/signup` - Register a new user
+- `POST /auth/login` - Login and get JWT token
 
 ### Books
-- `GET /api/books` - Get all books (with pagination and filters)
-- `POST /api/books` - Create a new book (requires authentication)
-- `GET /api/books/{id}` - Get book by ID
-- `PATCH /api/books/{id}` - Update book (requires authentication)
-- `DELETE /api/books/{id}` - Delete book (requires authentication)
+- `GET /books` - Get all books (with pagination and filters)
+- `POST /books` - Create a new book (requires authentication)
+- `GET /books/{id}` - Get book by ID
+- `PATCH /books/{id}` - Update book (requires authentication)
+- `DELETE /books/{id}` - Delete book (requires authentication)
 
 ### Legacy Routes (for backward compatibility)
 - `POST /users/signup` - Register a new user
@@ -145,12 +145,12 @@ python scripts/seed_data.py --help
 ### Register and Login
 ```bash
 # Register
-curl -X POST http://localhost:5000/api/auth/signup \
+curl -X POST http://localhost:5000/auth/signup \
   -H "Content-Type: application/json" \
   -d '{"email": "user@example.com", "password": "password123"}'
 
 # Login
-curl -X POST http://localhost:5000/api/auth/login \
+curl -X POST http://localhost:5000/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "user@example.com", "password": "password123"}'
 ```
@@ -158,7 +158,7 @@ curl -X POST http://localhost:5000/api/auth/login \
 ### Book Operations
 ```bash
 # Create a book (requires JWT token)
-curl -X POST http://localhost:5000/api/books \
+curl -X POST http://localhost:5000/books \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
@@ -171,10 +171,10 @@ curl -X POST http://localhost:5000/api/books \
   }'
 
 # Get books with filters
-curl "http://localhost:5000/api/books?author=Fitzgerald&category=Fiction&min_price=10&max_price=20&page=1&per_page=10"
+curl "http://localhost:5000/books?author=Fitzgerald&category=Fiction&min_price=10&max_price=20&page=1&per_page=10"
 
 # Get specific book
-curl http://localhost:5000/api/books/1
+curl http://localhost:5000/books/1
 ```
 
 ## 🧪 Testing
