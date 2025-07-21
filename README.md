@@ -55,7 +55,7 @@ scripts/            # Database seeding utilities
 
 ```bash
 # Clone and start
-git clone <https://github.com/yahyamohmuedpro99/online-library-system.git>
+git clone https://github.com/yahyamohmuedpro99/online-library-system.git
 cd online-library-system
 docker-compose up --build
 
@@ -68,7 +68,7 @@ docker-compose up --build
 
 ```bash
 # Setup
-git clone <https://github.com/yahyamohmuedpro99/online-library-system.git>
+git clone https://github.com/yahyamohmuedpro99/online-library-system.git
 cd online-library-system
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
