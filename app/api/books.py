@@ -1,9 +1,7 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime
-from app import db
-from app.models.book import Book
+from app.services.book_service import BookService, ValidationError
 
 api = Namespace('books', description='Book management operations')
 
@@ -52,33 +50,18 @@ class BookList(Resource):
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 10, type=int)
         
-        query = Book.query
-        
-        # Filters
-        if request.args.get('author'):
-            query = query.filter(Book.author.ilike(f"%{request.args.get('author')}%"))
-        
-        if request.args.get('category'):
-            query = query.filter(Book.category.ilike(f"%{request.args.get('category')}%"))
-        
-        if request.args.get('min_price'):
-            query = query.filter(Book.price >= float(request.args.get('min_price')))
-        
-        if request.args.get('max_price'):
-            query = query.filter(Book.price <= float(request.args.get('max_price')))
-        
-        if request.args.get('release_year'):
-            year = int(request.args.get('release_year'))
-            query = query.filter(db.extract('year', Book.release_date) == year)
-        
-        books = query.paginate(page=page, per_page=per_page, error_out=False)
-        
-        return {
-            'books': [book.to_dict() for book in books.items],
-            'total': books.total,
-            'pages': books.pages,
-            'current_page': page
+        filters = {
+            'author': request.args.get('author'),
+            'category': request.args.get('category'),
+            'min_price': request.args.get('min_price'),
+            'max_price': request.args.get('max_price'),
+            'release_year': request.args.get('release_year')
         }
+        
+        try:
+            return BookService.get_books_with_filters(page, per_page, filters)
+        except ValidationError as e:
+            api.abort(400, str(e))
 
     @api.expect(book_model)
     @api.marshal_with(book_response, code=201)
@@ -88,36 +71,22 @@ class BookList(Resource):
         """Create a new book (requires authentication)"""
         data = request.get_json()
         
-        required_fields = ['title', 'author', 'category', 'price', 'release_date']
-        if not data or not all(field in data for field in required_fields):
-            api.abort(400, 'Missing required fields')
-        
         try:
-            release_date = datetime.strptime(data['release_date'], '%Y-%m-%d').date()
-        except ValueError:
-            api.abort(400, 'Invalid date format. Use YYYY-MM-DD')
-        
-        book = Book(
-            title=data['title'],
-            author=data['author'],
-            category=data['category'],
-            price=float(data['price']),
-            release_date=release_date,
-            description=data.get('description', '')
-        )
-        
-        db.session.add(book)
-        db.session.commit()
-        
-        return book.to_dict(), 201
+            book = BookService.create_book(data)
+            return book, 201
+        except ValidationError as e:
+            api.abort(400, str(e))
 
 @api.route('/<int:book_id>')
 class BookDetail(Resource):
     @api.marshal_with(book_response)
     def get(self, book_id):
         """Get book details by ID"""
-        book = Book.query.get_or_404(book_id)
-        return book.to_dict()
+        try:
+            book = BookService.get_book_by_id(book_id)
+            return book
+        except ValidationError as e:
+            api.abort(404, str(e))
 
     @api.expect(book_model)
     @api.marshal_with(book_response)
@@ -125,28 +94,20 @@ class BookDetail(Resource):
     @jwt_required()
     def patch(self, book_id):
         """Update book (requires authentication)"""
-        book = Book.query.get_or_404(book_id)
         data = request.get_json()
         
-        if not data:
-            api.abort(400, 'No data provided')
-        
-        if 'title' in data:
-            book.title = data['title']
-        if 'author' in data:
-            book.author = data['author']
-        if 'category' in data:
-            book.category = data['category']
-        if 'price' in data:
-            book.price = float(data['price'])
-        if 'description' in data:
-            book.description = data['description']
-        if 'release_date' in data:
-            try:
-                book.release_date = datetime.strptime(data['release_date'], '%Y-%m-%d').date()
-            except ValueError:
-                api.abort(400, 'Invalid date format. Use YYYY-MM-DD')
-        
-        db.session.commit()
-        
-        return book.to_dict()
+        try:
+            book = BookService.update_book(book_id, data)
+            return book
+        except ValidationError as e:
+            api.abort(400, str(e))
+
+    @api.doc(security='Bearer')
+    @jwt_required()
+    def delete(self, book_id):
+        """Delete book (requires authentication)"""
+        try:
+            BookService.delete_book(book_id)
+            return {'message': 'Book deleted successfully'}, 200
+        except ValidationError as e:
+            api.abort(404, str(e))

@@ -4,3 +4,5 @@ Flask-JWT-Extended
 Flask-RESTX
 python-dotenv
 pytest
+faker
+click

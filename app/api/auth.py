@@ -1,8 +1,6 @@
 from flask import request
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import create_access_token
-from app import db
-from app.models.user import User
+from app.services.auth_service import AuthService, ValidationError
 
 api = Namespace('auth', description='Authentication operations')
 
@@ -36,19 +34,11 @@ class Signup(Resource):
         """Register a new user"""
         data = request.get_json()
         
-        if not data or not data.get('email') or not data.get('password'):
-            api.abort(400, 'Email and password required')
-        
-        if User.query.filter_by(email=data['email']).first():
-            api.abort(400, 'Email already exists')
-        
-        user = User(email=data['email'])
-        user.set_password(data['password'])
-        
-        db.session.add(user)
-        db.session.commit()
-        
-        return user.to_dict(), 201
+        try:
+            user = AuthService.signup(data)
+            return user, 201
+        except ValidationError as e:
+            api.abort(400, str(e))
 
 @api.route('/login')
 class Login(Resource):
@@ -58,17 +48,8 @@ class Login(Resource):
         """Login and get JWT token"""
         data = request.get_json()
         
-        if not data or not data.get('email') or not data.get('password'):
-            api.abort(400, 'Email and password required')
-        
-        user = User.query.filter_by(email=data['email']).first()
-        
-        if not user or not user.check_password(data['password']):
-            api.abort(401, 'Invalid credentials')
-        
-        access_token = create_access_token(identity=user.id)
-        
-        return {
-            'access_token': access_token,
-            'user': user.to_dict()
-        }
+        try:
+            result = AuthService.login(data)
+            return result
+        except ValidationError as e:
+            api.abort(401, str(e))
