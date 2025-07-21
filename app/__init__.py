@@ -18,6 +18,8 @@ def create_app():
     
     # Register blueprints
     from app.routes import health_bp
+    from app.routes.users import users_bp
     app.register_blueprint(health_bp)
+    app.register_blueprint(users_bp)
     
     return app
