@@ -19,8 +19,27 @@ python run.py
 
 ## API Endpoints
 
+### Health
 - `GET /health` - Health check
-- `GET /docs/` - API documentation
+
+### Authentication
+- `POST /users/signup` - Register a new user
+- `POST /users/login` - Login and get JWT token
+
+### Books
+- `POST /books` - Create a book (requires auth)
+- `GET /books` - List books with pagination and filters
+- `GET /books/{id}` - Get book details
+- `PATCH /books/{id}` - Update book (requires auth)
+
+### Documentation
+- `GET /docs/` - Swagger API documentation
+
+## Testing
+
+```bash
+pytest
+```
 
 ## Environment Variables
 
